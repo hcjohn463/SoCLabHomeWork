@@ -7,6 +7,7 @@
 #include <map>
 #include <cmath>
 #include <regex>
+#include <stack>
 
 class Computer {
 public:
@@ -20,6 +21,11 @@ public:
     std::string changeMathSymbol(std::string expression);
     std::string changeVariableSymbol(std::string expression);
     float extractNumber(std::string s);
+    float applyOp(char op, float a, float b);
+    float evaluate(std::string expression);
+    int getPrecedence(char op);
+    std::vector<std::string> definePrecedence;
+    void showResult();
 };
 
 bool Computer::openFile(std::string filename) {
@@ -35,23 +41,19 @@ bool Computer::openFile(std::string filename) {
 bool Computer::readFile(std::ifstream& file) {
     std::string line;
     while (std::getline(file, line)) {
-        std::cout << line << std::endl;
         std::istringstream iss(line);
         std::string word;
         while (iss >> word) {
             if (word == "int") {
-                std::cout << "Define int: " << line << std::endl;
                 storeVariable(line, 1); //int
                 break;
             }
             else if (word == "float") {
-                std::cout << "Define float: " << line << std::endl;
                 storeVariable(line, 0); //float
                 break;
             }
         }
         if (iss.eof()) { // expression
-            std::cout << "Sentence: " << line << std::endl;
             line = spaceGap(line); //間隔+去除分號
             processExpression(line);
         }
@@ -99,6 +101,85 @@ std::string Computer::spaceGap(std::string line) {
     }
     return result;
 }
+int Computer::getPrecedence(char op) {
+    switch (op) {
+    case '+':
+    case '-':
+        return 1;
+    case '*':
+    case '/':
+        return 2;
+    case '^':
+        return 3;
+    default:
+        return -1;
+    }
+}
+float Computer::applyOp(char op, float a, float b) {
+    switch (op) {
+    case '+': return a + b;
+    case '-': return a - b;
+    case '*': return a * b;
+    case '/': return a / b;
+    case '^': return pow(a, b);
+    }
+    return 0.0;
+}
+float Computer::evaluate(std::string expression) {
+    std::stack<float> values;
+    std::stack<char> ops;
+    for (int i = 0; i < expression.length(); i++) {
+        if (expression[i] == ' ')
+            continue;
+        else if (isdigit(expression[i])) {
+            std::string num_str = "";
+            while (i < expression.length() && (isdigit(expression[i]) || expression[i] == '.')) {
+                num_str += expression[i];
+                i++;
+            }
+            i--;
+            float num = stof(num_str);
+            values.push(num);
+        }
+        else if (expression[i] == '(') {
+            ops.push(expression[i]);
+        }
+        else if (expression[i] == ')') {
+            while (ops.top() != '(') {
+                float val2 = values.top();
+                values.pop();
+                float val1 = values.top();
+                values.pop();
+                char op = ops.top();
+                ops.pop();
+                values.push(applyOp(op, val1, val2));
+            }
+            ops.pop();
+        }
+        else {
+            while (!ops.empty() && getPrecedence(ops.top()) >= getPrecedence(expression[i])) {
+                float val2 = values.top();
+                values.pop();
+                float val1 = values.top();
+                values.pop();
+                char op = ops.top();
+                ops.pop();
+                values.push(applyOp(op, val1, val2));
+            }
+            ops.push(expression[i]);
+        }
+    }
+    while (!ops.empty()) {
+        float val2 = values.top();
+        values.pop();
+        float val1 = values.top();
+        values.pop();
+        char op = ops.top();
+        ops.pop();
+        values.push(applyOp(op, val1, val2));
+    }
+    return values.top();
+}
 std::string Computer::changeVariableSymbol(std::string expression) {
     std::vector<std::string> words;
     std::istringstream iss(expression);
@@ -111,7 +192,6 @@ std::string Computer::changeVariableSymbol(std::string expression) {
         auto itInt = this->intMap.find(w);
         auto itFloat = this->floatMap.find(w);
         if (itInt != this->intMap.end()) {
-            std::cout << "Find: " << w << std::endl;
             after += std::to_string(this->intMap[w]);
             after += " ";
         }
@@ -187,7 +267,6 @@ std::string Computer::changeMathSymbol(std::string expression) {
         }
         }
     }
-    std::cout << "After: " << after << std::endl;
     return after;
 }
 float Computer::extractNumber(std::string s)
@@ -234,9 +313,17 @@ void Computer::processExpression(std::string line) {
             std::cerr << "Invalid input: " << line << std::endl;
             return;
         }
-        std::cout << "Expression: " << expr << std::endl;
         std::string afterChangeVariable = changeVariableSymbol(expr);
         std::string afterChangeMath = changeMathSymbol(afterChangeVariable);
+        float result = evaluate(afterChangeMath);
+        auto itInt = this->intMap.find(varName);
+        auto itFloat = this->floatMap.find(varName);
+        if (itInt != this->intMap.end()) {
+            this->intMap[varName] = result;
+        }
+        else if (itFloat != this->floatMap.end()) {
+            this->floatMap[varName] = result;
+        }
     }
 }
 
@@ -264,14 +351,55 @@ void Computer::storeVariable(std::string line, bool type) {
     variables.pop_back();
     if (type) {
         for (const auto& var : variables) {
+            this->definePrecedence.push_back(var);
             this->intMap[var] = 0;
         }
     }
     else {
         for (const auto& var : variables) {
+            this->definePrecedence.push_back(var);
             this->floatMap[var] = 0.0;
         }
     }
+}
+void Computer::showResult() {
+    std::string result = "(";
+    int size = this->definePrecedence.size();
+    for (int i = 0; i < size; i++) {
+        if (i == size - 1) {
+            result += this->definePrecedence[i];
+            result += ") = (";
+        }
+        else {
+            result += this->definePrecedence[i];
+            result += ", ";
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        auto itInt = this->intMap.find(this->definePrecedence[i]);
+        auto itFloat = this->floatMap.find(this->definePrecedence[i]);
+        if (itInt != this->intMap.end()) {
+            if (i == size - 1) {
+                result += std::to_string(intMap[this->definePrecedence[i]]);
+                result += ")";
+            }
+            else {
+                result += std::to_string(intMap[this->definePrecedence[i]]);
+                result += ", ";
+            }
+        }
+        else if (itFloat != this->floatMap.end()) {
+            if (i == size - 1) {
+                result += std::to_string(floatMap[this->definePrecedence[i]]);
+                result += ")";
+            }
+            else {
+                result += std::to_string(floatMap[this->definePrecedence[i]]);
+                result += ", ";
+            }
+        }
+    }
+    std::cout << result << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -281,11 +409,6 @@ int main(int argc, char* argv[]) {
     }
     Computer cm;
     cm.openFile(argv[1]);
-    for (auto it = cm.intMap.begin(); it != cm.intMap.end(); ++it) {
-        std::cout << it->first << ": " << it->second << std::endl;
-    }
-    for (auto it = cm.floatMap.begin(); it != cm.floatMap.end(); ++it) {
-        std::cout << it->first << ": " << it->second << std::endl;
-    }
+    cm.showResult();
     return 0;
 }
