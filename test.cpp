@@ -18,6 +18,7 @@ public:
     std::map<std::string, float> floatMap;
     std::string spaceGap(std::string line);
     std::string changeMathSymbol(std::string expression);
+    std::string changeVariableSymbol(std::string expression);
     float extractNumber(std::string s);
 };
 
@@ -86,7 +87,7 @@ std::string Computer::spaceGap(std::string line) {
         }
     }
     // Replace math functions with space-separated versions
-    std::vector<std::string> mathFunctions = { "sin", "cos", "exp", "log" };
+    std::vector<std::string> mathFunctions = { "sin", "cos", "exp", "log" , "tan" };
     for (const auto& func : mathFunctions) {
         std::string searchStr = func + "(";
         std::string replaceStr = " " + func + " (";
@@ -97,6 +98,33 @@ std::string Computer::spaceGap(std::string line) {
         }
     }
     return result;
+}
+std::string Computer::changeVariableSymbol(std::string expression) {
+    std::vector<std::string> words;
+    std::istringstream iss(expression);
+    std::string word;
+    std::string after;
+    while (iss >> word) {
+        words.push_back(word);
+    }
+    for (const auto& w : words) {
+        auto itInt = this->intMap.find(w);
+        auto itFloat = this->floatMap.find(w);
+        if (itInt != this->intMap.end()) {
+            std::cout << "Find: " << w << std::endl;
+            after += std::to_string(this->intMap[w]);
+            after += " ";
+        }
+        else if (itFloat != this->floatMap.end()) {
+            after += std::to_string(this->floatMap[w]);
+            after += " ";
+        }
+        else {
+            after += w;
+            after += " ";
+        }
+    }
+    return after;
 }
 
 std::string Computer::changeMathSymbol(std::string expression) {
@@ -109,54 +137,54 @@ std::string Computer::changeMathSymbol(std::string expression) {
     }
     for (const auto& w : words) {
         switch (w[0]) {
-            case 's': {
-                // sin
-                float degrees = this->extractNumber(w);
-                float radians = degrees * M_PI / 180;
-                float result = sin(radians);
-                after += std::to_string(result);
-                after += " ";
-                break;
-            }
-            case 'c': {
-                // cos
-                float degrees = this->extractNumber(w);
-                float radians = degrees * M_PI / 180;
-                float result = cos(radians);
-                after += std::to_string(result);
-                after += " ";
-                break;
-            }
-            case 't': {
-                // tan
-                float degrees = this->extractNumber(w);
-                float radians = degrees * M_PI / 180;
-                float result = tan(radians);
-                after += std::to_string(result);
-                after += " ";
-                break;
-            }
-            case 'e': {
-                // exp
-                float n = this->extractNumber(w);
-                float result = exp(n);
-                after += std::to_string(result);
-                after += " ";
-                break;
-            }
-            case 'l': {
-                // log
-                float n = this->extractNumber(w);
-                float result = log(n);
-                after += std::to_string(result);
-                after += " ";
-                break;
-            }
-            default: {
-                after += w;
-                after += " ";
-                break;
-            }
+        case 's': {
+            // sin
+            float degrees = this->extractNumber(w);
+            float radians = degrees * M_PI / 180;
+            float result = sin(radians);
+            after += std::to_string(result);
+            after += " ";
+            break;
+        }
+        case 'c': {
+            // cos
+            float degrees = this->extractNumber(w);
+            float radians = degrees * M_PI / 180;
+            float result = cos(radians);
+            after += std::to_string(result);
+            after += " ";
+            break;
+        }
+        case 't': {
+            // tan
+            float degrees = this->extractNumber(w);
+            float radians = degrees * M_PI / 180;
+            float result = tan(radians);
+            after += std::to_string(result);
+            after += " ";
+            break;
+        }
+        case 'e': {
+            // exp
+            float n = this->extractNumber(w);
+            float result = exp(n);
+            after += std::to_string(result);
+            after += " ";
+            break;
+        }
+        case 'l': {
+            // log
+            float n = this->extractNumber(w);
+            float result = log(n);
+            after += std::to_string(result);
+            after += " ";
+            break;
+        }
+        default: {
+            after += w;
+            after += " ";
+            break;
+        }
         }
     }
     std::cout << "After: " << after << std::endl;
@@ -207,7 +235,8 @@ void Computer::processExpression(std::string line) {
             return;
         }
         std::cout << "Expression: " << expr << std::endl;
-        std::string expression = changeMathSymbol(expr);
+        std::string afterChangeVariable = changeVariableSymbol(expr);
+        std::string afterChangeMath = changeMathSymbol(afterChangeVariable);
     }
 }
 
