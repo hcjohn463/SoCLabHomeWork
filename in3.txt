@@ -1,7 +1,8 @@
 int a, b, c; // integer variables
-float d,e ; // float variables
+float d,e,f ; // float variables
 a= 5;
 b =7 ;
 e = 3.4;
+f = 1.23;
 c = (12 +23) / (a + 12) * (b + 8);
-d = (exp2+32)/6;
+d = (exp2+32)/6 + sin 45;

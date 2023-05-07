@@ -5,6 +5,8 @@
 #include <vector>
 #include <algorithm>
 #include <map>
+#include <cmath>
+#include <regex>
 
 class Computer {
 public:
@@ -15,6 +17,8 @@ public:
     std::map<std::string, int> intMap;
     std::map<std::string, float> floatMap;
     std::string spaceGap(std::string line);
+    std::string changeMathSymbol(std::string expression);
+    float extractNumber(std::string s);
 };
 
 bool Computer::openFile(std::string filename) {
@@ -94,6 +98,83 @@ std::string Computer::spaceGap(std::string line) {
     }
     return result;
 }
+
+std::string Computer::changeMathSymbol(std::string expression) {
+    std::vector<std::string> words;
+    std::istringstream iss(expression);
+    std::string word;
+    std::string after;
+    while (iss >> word) {
+        words.push_back(word);
+    }
+    for (const auto& w : words) {
+        switch (w[0]) {
+            case 's': {
+                // sin
+                float degrees = this->extractNumber(w);
+                float radians = degrees * M_PI / 180;
+                float result = sin(radians);
+                after += std::to_string(result);
+                after += " ";
+                break;
+            }
+            case 'c': {
+                // cos
+                float degrees = this->extractNumber(w);
+                float radians = degrees * M_PI / 180;
+                float result = cos(radians);
+                after += std::to_string(result);
+                after += " ";
+                break;
+            }
+            case 't': {
+                // tan
+                float degrees = this->extractNumber(w);
+                float radians = degrees * M_PI / 180;
+                float result = tan(radians);
+                after += std::to_string(result);
+                after += " ";
+                break;
+            }
+            case 'e': {
+                // exp
+                float n = this->extractNumber(w);
+                float result = exp(n);
+                after += std::to_string(result);
+                after += " ";
+                break;
+            }
+            case 'l': {
+                // log
+                float n = this->extractNumber(w);
+                float result = log(n);
+                after += std::to_string(result);
+                after += " ";
+                break;
+            }
+            default: {
+                after += w;
+                after += " ";
+                break;
+            }
+        }
+    }
+    std::cout << "After: " << after << std::endl;
+    return after;
+}
+float Computer::extractNumber(std::string s)
+{
+    std::regex re("\\d+\\.?\\d*");
+    std::smatch match;
+    if (std::regex_search(s, match, re)) {
+        // 如果匹配成功，將匹配到的字符串轉換為浮點數並返回
+        return std::stof(match.str());
+    }
+    else {
+        // 如果匹配失敗，返回 0
+        return 0;
+    }
+}
 void Computer::processExpression(std::string line) {
     std::istringstream iss(line);
     std::string varName;
@@ -101,7 +182,6 @@ void Computer::processExpression(std::string line) {
     float varValue;
 
     if (iss >> varName >> equalSign >> varValue) {
-        std::cout << "Varvalue = " << varValue << std::endl;
         if (equalSign == '=') {
             auto itInt = this->intMap.find(varName);
             auto itFloat = this->floatMap.find(varName);
@@ -127,6 +207,7 @@ void Computer::processExpression(std::string line) {
             return;
         }
         std::cout << "Expression: " << expr << std::endl;
+        std::string expression = changeMathSymbol(expr);
     }
 }
 
